@@ -1,0 +1,44 @@
+from flask import Flask, render_template, request, jsonify
+from chatterbot import ChatBot
+import os
+import url_marker
+import re
+import bleach
+
+app = Flask(__name__)
+
+chatbot = ChatBot(
+    'Test ChatBot',
+    trainer='chatterbot.trainers.ChatterBotCorpusTrainer'
+)
+
+@app.route("/")
+def hello():
+    return render_template('chat.html')
+
+@app.route("/ask", methods=['POST'])
+def ask():
+	message = str(request.form['messageText'])
+	# kernel now ready for use
+	while True:
+	    if message == "quit":
+	        exit()
+	    else:
+		
+		bot_response = str(chatbot.get_response(message))
+		url = re.findall(url_marker.WEB_URL_REGEX,bot_response)
+		if url:
+			Response = bot_response.replace('(' + url[0] + ')','')
+			url =  bleach.linkify(url[0])
+			Response = Response.split('%%')
+		
+			final_response = Response[0] + '<br>' + ''.join(Response[1:]) + '<br>' + "For more information, checkout the link: " + url
+		else:
+			final_response = bot_response
+                
+	        # print bot_response
+		
+	        return jsonify({'status':'OK','answer':final_response})
+
+if __name__ == "__main__":
+    app.run(host='192.168.101.193',port=5000)
